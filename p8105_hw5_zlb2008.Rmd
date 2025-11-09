@@ -1,0 +1,83 @@
+---
+title: "p8105_hw5_zlb2008"
+author: "Zakari L. Billo"
+date: "2025-11-09"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+  fig.width = 8,
+  fig.height = 7,
+  fig.align = "center",
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+
+Suppose you put 𝑛 people in a room, and want to know the probability that at least two people share a birthday. For simplicity, we’ll assume there are no leap years (i.e. there are only 365 days) and that birthdays are uniformly distributed over the year (which is actually not the case).
+
+Write a function that, for a fixed group size, randomly draws “birthdays” for each person; checks whether there are duplicate birthdays in the group; and returns TRUE or FALSE based on the result.
+
+```{r}
+set.seed(1)
+
+bday_match <- function(n) {
+  
+  birthdays <- sample(1:365, size = n, replace = TRUE)
+  
+  return(any(duplicated(birthdays)))
+}
+```
+
+Next, run this function 10000 times for each group size between 2 and 50. For each group size, compute the probability that at least two people in the group will share a birthday by averaging across the 10000 simulation runs. Make a plot showing the probability as a function of group size, and comment on your results.
+
+```{r}
+n_sims <- 10000
+group_sizes <- 2:50
+
+probabilities <- sapply(group_sizes, function(n) {
+  
+    sim_results <- replicate(n_sims, bday_match(n))
+    
+    mean(sim_results)
+    
+})
+
+results_df <- data.frame(
+  n = group_sizes,
+  probability = probabilities
+  ) 
+
+results_df |>
+  ggplot(aes(x = n, y = probability)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "blue") +
+  labs(
+    title = "Birthday Problem Simulation",
+    x = "Group Size (n)",
+    y = "Probability of at least one shared birthday"
+  ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() |>
+  print()
+```
+
+The probability of a shared birhtday appears to be positive monotinic as a function of group size. At a group sizes 23 and 50 there is a 51.30% and 97.03% chance of at least one shared birthday, respectively. The growth is rapid because we aren't checking for a match with a specific birthday or birthdate. Instead, we are checking for any match between any two people in the group.
+
+## Problem 2
+
