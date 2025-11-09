@@ -165,3 +165,91 @@ The sample average of $\hat{\mu}$ across tests for which the null is rejected is
 
 ## Problem 3 
 
+```{r}
+homicide_df <- read.csv('data/homicide-data.csv', na = c("NA", ".", "")) |>
+  janitor::clean_names() 
+
+summary(homicide_df)
+```
+
+The raw data has 52179 observations, corresponding to homicides, across 12 variables: `uid`, `reported_date`, `victim_last`, `victim_first`, `victim_race`, `victim_age`, `victim_sex`, `city`, `state`, `lat`, `lon`, `disposition`. There are 120 NAs split evenly between `lat` and `lon`. 
+
+```{r}
+homicide_df <- homicide_df |>
+  unite(
+    col = "city_state", 
+    city, state,  
+    sep = ", ",    
+    remove = TRUE   
+  ) 
+
+homicide_df |> 
+  group_by(city_state) |>
+  summarize(
+    total_homicides = n(),
+    unsolved_closed_without = sum(disposition == "Closed without arrest"),
+    unsolved_open = sum(disposition == "Open/No arrest"),
+    .groups = "drop" 
+  ) |>
+  knitr::kable(
+    caption = "Homicide Counts by City and Disposition",
+    col.names = c("City-State", "Total Homicides", 
+                  "Closed without Arrest", "Open/No Arrest")
+  )
+
+
+```
+
+```{r}
+homicide_df |>
+  filter(city_state == "Baltimore, MD") |>
+  mutate(
+    unsolved = ifelse(disposition %in% c("Closed without arrest", "Open/No arrest"), 1, 0)
+  ) |>
+  summarize(
+    unsolved_count = sum(unsolved, na.rm = TRUE),
+    total_count = n()  
+  ) |>
+  reframe(
+    broom::tidy(prop.test(unsolved_count, total_count))
+  ) |>
+  select(estimate, conf.low, conf.high)
+```
+ 
+```{r}
+get_city_prop_tests <- function(data) {
+  data |>
+    mutate(
+      unsolved = ifelse(disposition %in% c("Closed without arrest", "Open/No arrest"), 1, 0)
+    ) |>
+    group_by(city_state) %>%
+    summarize(
+      unsolved_count = sum(unsolved, na.rm = TRUE),
+      total_count = n(),
+      .groups = "drop"
+    ) |>
+    mutate(test = map2(unsolved_count, total_count, ~ prop.test(.x, .y)),
+           tidy = map(test, broom::tidy)) %>%
+    unnest(tidy) |>
+    select(city_state, estimate, conf.low, conf.high)
+}
+
+city_prop_tests <- get_city_prop_tests(homicide_df)
+print(city_prop_tests)
+```
+
+```{r}
+city_prop_tests |>
+  mutate(city_state = reorder(city_state, estimate)
+  ) |>
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_col(fill = "lightpink") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.3) +
+  coord_flip() +
+  labs(
+    x = "City",
+    y = "Prop. Unsolved Homocides",
+    title = "Proportion of Unsolved Homicides by City (95% CI)",
+  ) +
+  theme_minimal(base_size = 14)
+```
