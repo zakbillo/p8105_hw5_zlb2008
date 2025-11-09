@@ -34,7 +34,7 @@ set.seed(1)
 
 bday_match <- function(n) {
   
-  birthdays <- sample(1:365, size = n, replace = TRUE)
+  birthdays <- sample(1:365, size =  n, replace = TRUE)
   
   return(any(duplicated(birthdays)))
 }
@@ -59,7 +59,7 @@ results_df <- data.frame(
 
 results_df |>
   ggplot(aes(x = n, y = probability)) +
-  geom_line(color = "blue", size = 1) +
+  geom_line(color = "blue", linewidth = 1) +
   geom_point(color = "blue") +
   labs(
     title = "Birthday Problem Simulation",
@@ -101,7 +101,8 @@ sim_results |>
     mu_hat = estimate, 
     p_value = p.value
   ) |>
-  knitr::kable(digits = 3)
+  knitr::kable(digits = 3) |>
+  head(10)
 ```
 
 ```{r}
@@ -112,8 +113,8 @@ sim_results |>
     .groups = "drop" 
   ) |> 
   ggplot(aes(x = true_mu, y = proportion_rejected)) +
-  geom_line(color = "blue", size = 1) +
-  geom_point(color = "blue", size = 3) +
+  geom_line(color = "blue", linewidth =  1) +
+  geom_point(color = "blue", linewidth =  3) +
   geom_hline(yintercept = alpha, linetype = "dashed", color = "red") +
   annotate("text", x = 0.5, y = 0.07, label = "Type I Error Rate (α = 0.05)",
            hjust = 0, color = "red") +
@@ -127,7 +128,7 @@ sim_results |>
   theme_minimal()
 ```
 
-As effect size increases, power also increases.The fact that $H_0$ was rejected approximately 5% of times when the true value of $\mu$ is 0 confirms that $alpha$ is appropriately limiting the type 1 errors at the 0.05 threshhold. These results indicate the t test is working correctly for the simulation. 
+As effect size increases, power also increases. The fact that $H_0$ was rejected approximately 5% of times when the true value of $\mu$ is 0 confirms that $alpha$ is appropriately limiting the type 1 errors at the 0.05 threshhold. These results indicate the t test is working correctly for the simulation. 
 
 ```{r}
 sim_results |>
@@ -143,11 +144,11 @@ sim_results |>
     values_to = "avg_mu_hat"
   ) |>
   ggplot(aes(x = true_mu, y = avg_mu_hat, color = group)) +
-  geom_line(aes(linetype = group), size = 1) +
-  geom_point(aes(shape = group), size = 3) +
+  geom_line(aes(linetype = group), linewidth =  1) +
+  geom_point(aes(shape = group), linewidth =  3) +
   geom_abline(slope = 1, intercept = 0, linetype = "dotted", color = "black") +
   annotate("text", x = 1.3, y = 1.1, label = "y = x (Identity Line)", 
-           hjust = 0, vjust = 0, size = 3, color = "black") +
+           hjust = 0, vjust = 0, linewidth =  3, color = "black") +
   labs(
     title = "Average μ Estimate vs. True μ",
     subtitle = "Comparing all samples vs. only 'significant' (p < 0.05) samples",
@@ -196,8 +197,6 @@ homicide_df |>
     col.names = c("City-State", "Total Homicides", 
                   "Closed without Arrest", "Open/No Arrest")
   )
-
-
 ```
 
 ```{r}
