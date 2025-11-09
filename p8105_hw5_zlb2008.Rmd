@@ -29,10 +29,6 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ## Problem 1
 
-Suppose you put 𝑛 people in a room, and want to know the probability that at least two people share a birthday. For simplicity, we’ll assume there are no leap years (i.e. there are only 365 days) and that birthdays are uniformly distributed over the year (which is actually not the case).
-
-Write a function that, for a fixed group size, randomly draws “birthdays” for each person; checks whether there are duplicate birthdays in the group; and returns TRUE or FALSE based on the result.
-
 ```{r}
 set.seed(1)
 
@@ -43,8 +39,6 @@ bday_match <- function(n) {
   return(any(duplicated(birthdays)))
 }
 ```
-
-Next, run this function 10000 times for each group size between 2 and 50. For each group size, compute the probability that at least two people in the group will share a birthday by averaging across the 10000 simulation runs. Make a plot showing the probability as a function of group size, and comment on your results.
 
 ```{r}
 n_sims <- 10000
@@ -77,7 +71,97 @@ results_df |>
   print()
 ```
 
-The probability of a shared birhtday appears to be positive monotinic as a function of group size. At a group sizes 23 and 50 there is a 51.30% and 97.03% chance of at least one shared birthday, respectively. The growth is rapid because we aren't checking for a match with a specific birthday or birthdate. Instead, we are checking for any match between any two people in the group.
+The probability of a shared birhtday appears to be a positive monotinic function of group size. At a group sizes 23 and 50 there is a 51.30% and 97.03% chance of at least one shared birthday, respectively. The growth is rapid because we aren't checking for a match with a specific birthday or birthdate. Instead, we are checking for any match between any two people in the group.
 
 ## Problem 2
+
+```{r}
+set.seed(1)
+n = 30
+mus_to_test = 0:6 
+sigma = 5
+n_sims = 5000
+alpha = 0.05
+
+sim_results <- crossing(
+  true_mu = mus_to_test,
+  sim_id = 1:n_sims
+  ) |>
+  mutate(test_result = map(true_mu, ~ {
+    
+    sim_data_vector = rnorm(n, mean = .x, sd = sigma)
+    
+    broom::tidy(t.test(sim_data_vector, mu = 0))
+  })) |>
+  unnest(test_result)
+
+sim_results |>
+  select(
+    true_mu,
+    mu_hat = estimate, 
+    p_value = p.value
+  ) |>
+  knitr::kable(digits = 3)
+```
+
+```{r}
+sim_results |>
+  group_by(true_mu) |>
+  summarize(
+    proportion_rejected = mean(p.value < alpha),
+    .groups = "drop" 
+  ) |> 
+  ggplot(aes(x = true_mu, y = proportion_rejected)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "blue", size = 3) +
+  geom_hline(yintercept = alpha, linetype = "dashed", color = "red") +
+  annotate("text", x = 0.5, y = 0.07, label = "Type I Error Rate (α = 0.05)",
+           hjust = 0, color = "red") +
+  labs(
+    title = "Power & Type I Error by True Value of μ (n=30, σ=5)",
+    subtitle = "H0: μ = 0  |  5,000 simulations per point",
+    x = "True Value of μ",
+    y = "Proportion of times H0 was rejected"
+  ) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal()
+```
+
+As effect size increases, power also increases.The fact that $H_0$ was rejected approximately 5% of times when the true value of $\mu$ is 0 confirms that $alpha$ is appropriately limiting the type 1 errors at the 0.05 threshhold. These results indicate the t test is working correctly for the simulation. 
+
+```{r}
+sim_results |>
+  group_by(true_mu) |>
+  summarize(
+    `All Samples` = mean(estimate),
+    `Rejected Samples Only` = mean(estimate[p.value < alpha]),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = c(`All Samples`, `Rejected Samples Only`),
+    names_to = "group",
+    values_to = "avg_mu_hat"
+  ) |>
+  ggplot(aes(x = true_mu, y = avg_mu_hat, color = group)) +
+  geom_line(aes(linetype = group), size = 1) +
+  geom_point(aes(shape = group), size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dotted", color = "black") +
+  annotate("text", x = 1.3, y = 1.1, label = "y = x (Identity Line)", 
+           hjust = 0, vjust = 0, size = 3, color = "black") +
+  labs(
+    title = "Average μ Estimate vs. True μ",
+    subtitle = "Comparing all samples vs. only 'significant' (p < 0.05) samples",
+    x = "True Value of μ",
+    y = "Average μ Estimat)",
+    color = "Sample Group",
+    linetype = "Sample Group",
+    shape = "Sample Group"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("All Samples" = "blue", "Rejected Samples Only" = "red"))
+```
+
+The sample average of $\hat{\mu}$ across tests for which the null is rejected is not approximately equal to the true value of $\mu$, particularly between $0 < \mu < 3$. This is because low effect sizes worsen power, and produces selection bias. Filtering for $p < 0.05$ effectively captures overestimates, where the sample of 30 people produces a sample mean $\hat{\mu}$ that is unusually larger than the true mean. However, as $mu$ gets larger, the power approaches 100%, and the average $\hat{\mu}$ for the "rejected" group converges with the true $\mu$ and the average for the "All Samples" group.
+
+## Problem 3 
 
